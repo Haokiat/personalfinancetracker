@@ -7,6 +7,7 @@ import Budgets from './components/Budgets';
 import Goals from './components/Goals';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
+import AccountManagement from './components/AccountManagement';
 import { Transaction, Budget, Goal, Account } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 
@@ -15,7 +16,12 @@ function App() {
   const [transactions, setTransactions] = useLocalStorage<Transaction[]>('transactions', []);
   const [budgets, setBudgets] = useLocalStorage<Budget[]>('budgets', []);
   const [goals, setGoals] = useLocalStorage<Goal[]>('goals', []);
-  const [accounts, setAccounts] = useLocalStorage<Account[]>('accounts', []);
+  const [accounts, setAccounts] = useLocalStorage<Account[]>('accounts', [
+    { id: '1', name: 'DBS Savings', type: 'savings', balance: 15000, currency: 'SGD', description: 'Primary savings account for daily expenses' },
+    { id: '2', name: 'POSB Savings', type: 'savings', balance: 45000, currency: 'SGD', description: 'Emergency fund and long-term savings' },
+    { id: '3', name: 'Tiger Brokers', type: 'investment', balance: 25000, currency: 'SGD', description: 'Stock and ETF investments' },
+    { id: '4', name: 'UOB Credit Card', type: 'credit', balance: -2500, currency: 'SGD', description: 'Monthly credit card expenses' },
+  ]);
 
   const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
     const newTransaction: Transaction = {
@@ -106,6 +112,26 @@ function App() {
     setGoals(goals.filter(goal => goal.id !== goalId));
   };
 
+  // Account management functions
+  const addAccount = (account: Omit<Account, 'id'>) => {
+    const newAccount: Account = {
+      ...account,
+      id: Date.now().toString(),
+    };
+    setAccounts([...accounts, newAccount]);
+  };
+
+  const editAccount = (accountId: string, updatedAccount: Omit<Account, 'id'>) => {
+    const updatedAccounts = accounts.map(account =>
+      account.id === accountId ? { ...updatedAccount, id: accountId } : account
+    );
+    setAccounts(updatedAccounts);
+  };
+
+  const deleteAccount = (accountId: string) => {
+    setAccounts(accounts.filter(account => account.id !== accountId));
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -138,6 +164,15 @@ function App() {
             onAddGoal={addGoal}
             onEditGoal={editGoal}
             onDeleteGoal={deleteGoal}
+          />
+        );
+      case 'accounts':
+        return (
+          <AccountManagement
+            accounts={accounts}
+            onAddAccount={addAccount}
+            onEditAccount={editAccount}
+            onDeleteAccount={deleteAccount}
           />
         );
       case 'analytics':

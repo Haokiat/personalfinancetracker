@@ -28,7 +28,8 @@ export interface Goal {
 export interface Account {
   id: string;
   name: string;
-  type: 'checking' | 'savings' | 'credit' | 'investment';
+  type: 'savings' | 'credit' | 'investment' | 'checking';
   balance: number;
   currency: string;
+  description?: string;
 }
