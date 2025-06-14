@@ -19,7 +19,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose }) 
 
   const categories = {
     income: ['Salary', 'Freelance', 'Investment', 'Business', 'Other Income'],
-    expense: ['Food', 'Transportation', 'Housing', 'Entertainment', 'Shopping', 'Healthcare', 'Utilities', 'Other'],
+    expense: ['Food', 'Transportation', 'Housing', 'Entertainment', 'Shopping', 'Healthcare', 'Utilities', 'Subscription', 'Other'],
   };
 
   const handleSubmit = (e: React.FormEvent) => {
