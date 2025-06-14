@@ -13,7 +13,7 @@ export interface Budget {
   category: string;
   limit: number;
   spent: number;
-  period: 'monthly' | 'weekly' | 'yearly';
+  period: 'weekly' | 'monthly' | 'yearly';
 }
 
 export interface Goal {
@@ -31,10 +31,4 @@ export interface Account {
   type: 'checking' | 'savings' | 'credit' | 'investment';
   balance: number;
   currency: string;
-}
-
-export interface UserProfile {
-  nickname: string;
-  email: string;
-  birthday: string;
 }

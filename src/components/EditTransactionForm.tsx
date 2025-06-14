@@ -2,19 +2,20 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Transaction } from '../types';
 
-interface TransactionFormProps {
+interface EditTransactionFormProps {
+  transaction: Transaction;
   onSubmit: (transaction: Omit<Transaction, 'id'>) => void;
   onClose: () => void;
 }
 
-const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose }) => {
+const EditTransactionForm: React.FC<EditTransactionFormProps> = ({ transaction, onSubmit, onClose }) => {
   const [formData, setFormData] = useState({
-    type: 'expense' as 'income' | 'expense',
-    amount: '',
-    category: '',
-    description: '',
-    date: new Date().toISOString().split('T')[0],
-    recurring: false,
+    type: transaction.type,
+    amount: transaction.amount.toString(),
+    category: transaction.category,
+    description: transaction.description,
+    date: transaction.date,
+    recurring: transaction.recurring || false,
   });
 
   const categories = {
@@ -34,15 +35,13 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose }) 
       date: formData.date,
       recurring: formData.recurring,
     });
-
-    onClose();
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Add Transaction</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Edit Transaction</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -60,7 +59,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose }) 
                   type="radio"
                   value="income"
                   checked={formData.type === 'income'}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense', category: '' })}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense' })}
                   className="mr-2"
                 />
                 Income
@@ -70,7 +69,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose }) 
                   type="radio"
                   value="expense"
                   checked={formData.type === 'expense'}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense', category: '' })}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense' })}
                   className="mr-2"
                 />
                 Expense
@@ -156,7 +155,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose }) 
               type="submit"
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              Add Transaction
+              Update Transaction
             </button>
           </div>
         </form>
@@ -165,4 +164,4 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit, onClose }) 
   );
 };
 
-export default TransactionForm;
+export default EditTransactionForm;

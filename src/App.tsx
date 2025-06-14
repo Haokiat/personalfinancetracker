@@ -1,244 +1,157 @@
 import React, { useState } from 'react';
-import { useLocalStorage } from './hooks/useLocalStorage';
-import { Transaction, Budget, Goal, Account } from './types';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
+import TransactionForm from './components/TransactionForm';
 import Transactions from './components/Transactions';
 import Budgets from './components/Budgets';
 import Goals from './components/Goals';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
+import { Transaction, Budget, Goal, Account } from './types';
+import { useLocalStorage } from './hooks/useLocalStorage';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  
-  // Sample data for demonstration
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>('transactions', [
-    {
-      id: '1',
-      type: 'income',
-      amount: 5000,
-      category: 'Salary',
-      description: 'Monthly Salary',
-      date: '2024-01-15',
-      recurring: true,
-    },
-    {
-      id: '2',
-      type: 'expense',
-      amount: 1200,
-      category: 'Housing',
-      description: 'Rent Payment',
-      date: '2024-01-01',
-      recurring: true,
-    },
-    {
-      id: '3',
-      type: 'expense',
-      amount: 450,
-      category: 'Food',
-      description: 'Groceries',
-      date: '2024-01-10',
-    },
-    {
-      id: '4',
-      type: 'expense',
-      amount: 80,
-      category: 'Transportation',
-      description: 'Gas',
-      date: '2024-01-12',
-    },
-    {
-      id: '5',
-      type: 'income',
-      amount: 800,
-      category: 'Freelance',
-      description: 'Web Design Project',
-      date: '2024-01-20',
-    },
-  ]);
+  const [transactions, setTransactions] = useLocalStorage<Transaction[]>('transactions', []);
+  const [budgets, setBudgets] = useLocalStorage<Budget[]>('budgets', []);
+  const [goals, setGoals] = useLocalStorage<Goal[]>('goals', []);
+  const [accounts, setAccounts] = useLocalStorage<Account[]>('accounts', []);
 
-  const [budgets, setBudgets] = useLocalStorage<Budget[]>('budgets', [
-    {
-      id: '1',
-      category: 'Food',
-      limit: 600,
-      spent: 450,
-      period: 'monthly',
-    },
-    {
-      id: '2',
-      category: 'Transportation',
-      limit: 200,
-      spent: 80,
-      period: 'monthly',
-    },
-    {
-      id: '3',
-      category: 'Entertainment',
-      limit: 300,
-      spent: 120,
-      period: 'monthly',
-    },
-    {
-      id: '4',
-      category: 'Shopping',
-      limit: 400,
-      spent: 380,
-      period: 'monthly',
-    },
-  ]);
-
-  const [goals, setGoals] = useLocalStorage<Goal[]>('goals', [
-    {
-      id: '1',
-      title: 'Emergency Fund',
-      targetAmount: 10000,
-      currentAmount: 3500,
-      deadline: '2024-12-31',
-      category: 'Emergency Fund',
-    },
-    {
-      id: '2',
-      title: 'Vacation to Europe',
-      targetAmount: 5000,
-      currentAmount: 1200,
-      deadline: '2024-08-15',
-      category: 'Vacation',
-    },
-    {
-      id: '3',
-      title: 'New Car Down Payment',
-      targetAmount: 8000,
-      currentAmount: 2800,
-      deadline: '2024-10-01',
-      category: 'Car',
-    },
-  ]);
-
-  const [accounts] = useLocalStorage<Account[]>('accounts', [
-    {
-      id: '1',
-      name: 'Checking Account',
-      type: 'checking',
-      balance: 4500,
-      currency: 'USD',
-    },
-    {
-      id: '2',
-      name: 'Savings Account',
-      type: 'savings',
-      balance: 12000,
-      currency: 'USD',
-    },
-    {
-      id: '3',
-      name: 'Credit Card',
-      type: 'credit',
-      balance: -850,
-      currency: 'USD',
-    },
-  ]);
-
-  const addTransaction = (newTransaction: Omit<Transaction, 'id'>) => {
-    const transaction: Transaction = {
-      ...newTransaction,
+  const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
+    const newTransaction: Transaction = {
+      ...transaction,
       id: Date.now().toString(),
     };
-    setTransactions(prev => [transaction, ...prev]);
-
-    // Update budget spent amount if it's an expense
-    if (transaction.type === 'expense') {
-      setBudgets(prev => prev.map(budget => 
-        budget.category === transaction.category
-          ? { ...budget, spent: budget.spent + transaction.amount }
-          : budget
-      ));
-    }
+    const updatedTransactions = [...transactions, newTransaction];
+    setTransactions(updatedTransactions);
+    
+    // Update budget spending
+    updateBudgetSpending(updatedTransactions);
   };
 
-  const addBudget = (newBudget: Omit<Budget, 'id' | 'spent'>) => {
+  const updateTransaction = (id: string, updatedTransaction: Omit<Transaction, 'id'>) => {
+    const updatedTransactions = transactions.map(t => 
+      t.id === id ? { ...updatedTransaction, id } : t
+    );
+    setTransactions(updatedTransactions);
+    
+    // Update budget spending
+    updateBudgetSpending(updatedTransactions);
+  };
+
+  const deleteTransaction = (id: string) => {
+    const updatedTransactions = transactions.filter(t => t.id !== id);
+    setTransactions(updatedTransactions);
+    
+    // Update budget spending
+    updateBudgetSpending(updatedTransactions);
+  };
+
+  const updateBudgetSpending = (currentTransactions: Transaction[]) => {
+    const updatedBudgets = budgets.map(budget => {
+      const spent = currentTransactions
+        .filter(t => t.type === 'expense' && t.category === budget.category)
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      return { ...budget, spent };
+    });
+    
+    setBudgets(updatedBudgets);
+  };
+
+  const addBudget = (budget: Omit<Budget, 'id' | 'spent'>) => {
     const spent = transactions
-      .filter(t => t.type === 'expense' && t.category === newBudget.category)
+      .filter(t => t.type === 'expense' && t.category === budget.category)
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const budget: Budget = {
-      ...newBudget,
+    const newBudget: Budget = {
+      ...budget,
       id: Date.now().toString(),
       spent,
     };
-    setBudgets(prev => [...prev, budget]);
+    setBudgets([...budgets, newBudget]);
   };
 
-  const addGoal = (newGoal: Omit<Goal, 'id'>) => {
-    const goal: Goal = {
-      ...newGoal,
+  const editBudget = (budgetId: string, updatedBudget: Omit<Budget, 'id' | 'spent'>) => {
+    const spent = transactions
+      .filter(t => t.type === 'expense' && t.category === updatedBudget.category)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const updatedBudgets = budgets.map(budget =>
+      budget.id === budgetId ? { ...updatedBudget, id: budgetId, spent } : budget
+    );
+    setBudgets(updatedBudgets);
+  };
+
+  const deleteBudget = (budgetId: string) => {
+    setBudgets(budgets.filter(budget => budget.id !== budgetId));
+  };
+
+  const addGoal = (goal: Omit<Goal, 'id'>) => {
+    const newGoal: Goal = {
+      ...goal,
       id: Date.now().toString(),
     };
-    setGoals(prev => [...prev, goal]);
+    setGoals([...goals, newGoal]);
   };
 
-  const updateGoal = (goalId: string, contributionAmount: number) => {
-    setGoals(prev => prev.map(goal => 
-      goal.id === goalId
-        ? { ...goal, currentAmount: goal.currentAmount + contributionAmount }
-        : goal
-    ));
+  const editGoal = (goalId: string, updatedGoal: Omit<Goal, 'id'>) => {
+    const updatedGoals = goals.map(goal =>
+      goal.id === goalId ? { ...updatedGoal, id: goalId } : goal
+    );
+    setGoals(updatedGoals);
   };
 
-  const renderActiveTab = () => {
+  const deleteGoal = (goalId: string) => {
+    setGoals(goals.filter(goal => goal.id !== goalId));
+  };
+
+  const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return (
-          <Dashboard
-            transactions={transactions}
-            budgets={budgets}
-            goals={goals}
-            accounts={accounts}
-          />
-        );
+        return <Dashboard transactions={transactions} budgets={budgets} goals={goals} accounts={accounts} />;
+      case 'add-transaction':
+        return <TransactionForm onSubmit={addTransaction} onClose={() => setActiveTab('dashboard')} />;
       case 'transactions':
         return (
-          <Transactions
-            transactions={transactions}
+          <Transactions 
+            transactions={transactions} 
             onAddTransaction={addTransaction}
+            onUpdateTransaction={updateTransaction}
+            onDeleteTransaction={deleteTransaction}
           />
         );
       case 'budgets':
         return (
-          <Budgets
-            budgets={budgets}
+          <Budgets 
+            budgets={budgets} 
             transactions={transactions}
             onAddBudget={addBudget}
+            onEditBudget={editBudget}
+            onDeleteBudget={deleteBudget}
           />
         );
       case 'goals':
         return (
-          <Goals
+          <Goals 
             goals={goals}
             onAddGoal={addGoal}
-            onUpdateGoal={updateGoal}
+            onEditGoal={editGoal}
+            onDeleteGoal={deleteGoal}
           />
         );
       case 'analytics':
-        return <Analytics transactions={transactions} />;
+        return <Analytics transactions={transactions} budgets={budgets} goals={goals} />;
       case 'settings':
         return <Settings />;
       default:
-        return (
-          <Dashboard
-            transactions={transactions}
-            budgets={budgets}
-            goals={goals}
-            accounts={accounts}
-          />
-        );
+        return <Dashboard transactions={transactions} budgets={budgets} goals={goals} accounts={accounts} />;
     }
   };
 
   return (
     <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-      {renderActiveTab()}
+      {renderContent()}
     </Layout>
   );
 }

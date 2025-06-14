@@ -1,36 +1,21 @@
 import React, { useState } from 'react';
-import { Plus, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, AlertCircle, Edit, Trash2 } from 'lucide-react';
 import { Budget, Transaction } from '../types';
+import BudgetForm from './BudgetForm';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 
 interface BudgetsProps {
   budgets: Budget[];
   transactions: Transaction[];
   onAddBudget: (budget: Omit<Budget, 'id' | 'spent'>) => void;
+  onEditBudget: (budgetId: string, updatedBudget: Omit<Budget, 'id' | 'spent'>) => void;
+  onDeleteBudget: (budgetId: string) => void;
 }
 
-const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, onAddBudget }) => {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    category: '',
-    limit: '',
-    period: 'monthly' as 'monthly' | 'weekly' | 'yearly',
-  });
-
-  const categories = ['Food', 'Transportation', 'Housing', 'Entertainment', 'Healthcare', 'Shopping', 'Utilities', 'Other'];
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.category || !formData.limit) return;
-
-    onAddBudget({
-      category: formData.category,
-      limit: parseFloat(formData.limit),
-      period: formData.period,
-    });
-
-    setFormData({ category: '', limit: '', period: 'monthly' });
-    setIsFormOpen(false);
-  };
+const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, onAddBudget, onEditBudget, onDeleteBudget }) => {
+  const [showForm, setShowForm] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+  const [deletingBudget, setDeletingBudget] = useState<Budget | null>(null);
 
   const getBudgetStatus = (budget: Budget) => {
     const percentage = (budget.spent / budget.limit) * 100;
@@ -47,28 +32,45 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, onAddBudget })
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getProgressColor = (status: string) => {
     switch (status) {
-      case 'over': return <AlertTriangle className="h-4 w-4" />;
-      case 'warning': return <TrendingUp className="h-4 w-4" />;
-      default: return <CheckCircle className="h-4 w-4" />;
+      case 'over': return 'bg-gradient-to-r from-red-500 to-red-600';
+      case 'warning': return 'bg-gradient-to-r from-yellow-500 to-yellow-600';
+      default: return 'bg-gradient-to-r from-green-500 to-green-600';
     }
+  };
+
+  const handleEditBudget = (budget: Budget) => {
+    setEditingBudget(budget);
+    setShowForm(true);
+  };
+
+  const handleFormSubmit = (budgetData: Omit<Budget, 'id' | 'spent'>) => {
+    if (editingBudget) {
+      onEditBudget(editingBudget.id, budgetData);
+      setEditingBudget(null);
+    } else {
+      onAddBudget(budgetData);
+    }
+    setShowForm(false);
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+    setEditingBudget(null);
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Budgets</h2>
-          <p className="text-gray-600">Set and track your spending limits</p>
-        </div>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Budgets</h2>
         <button
-          onClick={() => setIsFormOpen(true)}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={() => setShowForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
         >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Budget
+          <Plus className="h-4 w-4" />
+          <span>Add Budget</span>
         </button>
       </div>
 
@@ -82,152 +84,111 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, onAddBudget })
           return (
             <div key={budget.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">{budget.category}</h3>
-                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
-                  {getStatusIcon(status)}
-                  <span className="ml-1 capitalize">{status}</span>
+                <h3 className="text-lg font-semibold text-gray-900">{budget.category}</h3>
+                <div className="flex items-center space-x-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+                    {status === 'over' ? 'Over Budget' : status === 'warning' ? 'Near Limit' : 'On Track'}
+                  </span>
+                  <button
+                    onClick={() => handleEditBudget(budget)}
+                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                    title="Edit Budget"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeletingBudget(budget)}
+                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    title="Delete Budget"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Spent</span>
-                  <span className="font-medium">${budget.spent.toLocaleString()}</span>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Spent</span>
+                  <span className="font-semibold text-gray-900">${budget.spent.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Budget</span>
-                  <span className="font-medium">${budget.limit.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Remaining</span>
-                  <span className={`font-medium ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ${remaining.toLocaleString()}
-                  </span>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Budget</span>
+                  <span className="font-semibold text-gray-900">${budget.limit.toLocaleString()}</span>
                 </div>
 
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
-                    className={`h-3 rounded-full transition-all duration-300 ${
-                      status === 'over' 
-                        ? 'bg-gradient-to-r from-red-500 to-red-600' 
-                        : status === 'warning'
-                        ? 'bg-gradient-to-r from-yellow-500 to-yellow-600'
-                        : 'bg-gradient-to-r from-green-500 to-green-600'
-                    }`}
+                    className={`h-3 rounded-full transition-all duration-300 ${getProgressColor(status)}`}
                     style={{ width: `${Math.min(percentage, 100)}%` }}
                   ></div>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500 capitalize">{budget.period}</span>
-                  <span className={`text-xs font-medium ${
-                    status === 'over' ? 'text-red-600' : 'text-gray-600'
-                  }`}>
-                    {percentage.toFixed(1)}%
+                  <span className="text-sm text-gray-600">{percentage.toFixed(1)}% used</span>
+                  <span className={`text-sm font-medium ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ${Math.abs(remaining).toLocaleString()} {remaining >= 0 ? 'remaining' : 'over'}
                   </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                  <span className="text-xs text-gray-500 capitalize">{budget.period}</span>
+                  <div className="flex items-center space-x-1">
+                    {status === 'over' ? (
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                    ) : status === 'warning' ? (
+                      <AlertCircle className="h-4 w-4 text-yellow-500" />
+                    ) : (
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           );
         })}
+      </div>
 
-        {budgets.length === 0 && (
-          <div className="col-span-full bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-            <div className="text-gray-400 mb-4">
-              <Plus className="h-16 w-16 mx-auto" />
+      {budgets.length === 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+          <div className="max-w-md mx-auto">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Plus className="h-8 w-8 text-blue-600" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No budgets yet</h3>
-            <p className="text-gray-500 mb-4">Create your first budget to start tracking your spending</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No budgets yet</h3>
+            <p className="text-gray-600 mb-6">
+              Create your first budget to start tracking your spending and stay on top of your finances.
+            </p>
             <button
-              onClick={() => setIsFormOpen(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={() => setShowForm(true)}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <Plus className="h-4 w-4 mr-2" />
               Create Budget
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Budget Form Modal */}
-      {isFormOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Create Budget</h3>
-              <button
-                onClick={() => setIsFormOpen(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                ×
-              </button>
-            </div>
+      {showForm && (
+        <BudgetForm
+          budget={editingBudget}
+          onSubmit={handleFormSubmit}
+          onClose={handleFormClose}
+        />
+      )}
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Select a category</option>
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Budget Limit</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.limit}
-                    onChange={(e) => setFormData({ ...formData, limit: e.target.value })}
-                    className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Period</label>
-                <select
-                  value={formData.period}
-                  onChange={(e) => setFormData({ ...formData, period: e.target.value as 'monthly' | 'weekly' | 'yearly' })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsFormOpen(false)}
-                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Create Budget
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* Delete Confirmation Modal */}
+      {deletingBudget && (
+        <DeleteConfirmationModal
+          title="Delete Budget"
+          message={`Are you sure you want to delete the "${deletingBudget.category}" budget? This action cannot be undone.`}
+          onConfirm={() => {
+            onDeleteBudget(deletingBudget.id);
+            setDeletingBudget(null);
+          }}
+          onCancel={() => setDeletingBudget(null)}
+        />
       )}
     </div>
   );

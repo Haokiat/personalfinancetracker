@@ -1,36 +1,65 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, TrendingUp, TrendingDown, Calendar, Tag } from 'lucide-react';
+import { Edit, Trash2, Plus, Filter, Search, Calendar, DollarSign, Tag } from 'lucide-react';
 import { Transaction } from '../types';
+import EditTransactionForm from './EditTransactionForm';
+import TransactionDeleteModal from './TransactionDeleteModal';
 import TransactionForm from './TransactionForm';
 
 interface TransactionsProps {
   transactions: Transaction[];
   onAddTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+  onUpdateTransaction: (id: string, transaction: Omit<Transaction, 'id'>) => void;
+  onDeleteTransaction: (id: string) => void;
 }
 
-const Transactions: React.FC<TransactionsProps> = ({ transactions, onAddTransaction }) => {
-  const [isFormOpen, setIsFormOpen] = useState(false);
+const Transactions: React.FC<TransactionsProps> = ({ 
+  transactions, 
+  onAddTransaction,
+  onUpdateTransaction, 
+  onDeleteTransaction 
+}) => {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
-  const [filterCategory, setFilterCategory] = useState('');
+  const [filterCategory, setFilterCategory] = useState('all');
 
   const categories = Array.from(new Set(transactions.map(t => t.category)));
 
-  const filteredTransactions = transactions
-    .filter(transaction => {
-      const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = filterType === 'all' || transaction.type === filterType;
-      const matchesCategory = !filterCategory || transaction.category === filterCategory;
-      return matchesSearch && matchesType && matchesCategory;
-    })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const filteredTransactions = transactions.filter(transaction => {
+    const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'all' || transaction.type === filterType;
+    const matchesCategory = filterCategory === 'all' || transaction.category === filterCategory;
+    
+    return matchesSearch && matchesType && matchesCategory;
+  });
 
-  const totalIncome = transactions
+  const sortedTransactions = filteredTransactions.sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  const handleEdit = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+  };
+
+  const handleDelete = (transaction: Transaction) => {
+    setDeletingTransaction(transaction);
+  };
+
+  const confirmDelete = () => {
+    if (deletingTransaction) {
+      onDeleteTransaction(deletingTransaction.id);
+      setDeletingTransaction(null);
+    }
+  };
+
+  const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpenses = transactions
+  const totalExpenses = filteredTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
@@ -38,174 +67,190 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAddTransact
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Transactions</h2>
-          <p className="text-gray-600">Track your income and expenses</p>
-        </div>
-        <button
-          onClick={() => setIsFormOpen(true)}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Transaction
-        </button>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Income</p>
-              <p className="text-2xl font-bold text-green-600">${totalIncome.toLocaleString()}</p>
-            </div>
-            <div className="bg-green-100 p-3 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-green-600" />
-            </div>
+        <h2 className="text-2xl font-bold text-gray-900">Transactions</h2>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Transaction</span>
+          </button>
+          <div className="bg-green-100 px-3 py-2 rounded-lg">
+            <span className="text-sm font-medium text-green-800">
+              Income: ${totalIncome.toLocaleString()}
+            </span>
           </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Expenses</p>
-              <p className="text-2xl font-bold text-red-600">${totalExpenses.toLocaleString()}</p>
-            </div>
-            <div className="bg-red-100 p-3 rounded-lg">
-              <TrendingDown className="h-6 w-6 text-red-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Net Balance</p>
-              <p className={`text-2xl font-bold ${
-                totalIncome - totalExpenses >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                ${(totalIncome - totalExpenses).toLocaleString()}
-              </p>
-            </div>
-            <div className={`p-3 rounded-lg ${
-              totalIncome - totalExpenses >= 0 ? 'bg-green-100' : 'bg-red-100'
-            }`}>
-              <TrendingUp className={`h-6 w-6 ${
-                totalIncome - totalExpenses >= 0 ? 'text-green-600' : 'text-red-600'
-              }`} />
-            </div>
+          <div className="bg-red-100 px-3 py-2 rounded-lg">
+            <span className="text-sm font-medium text-red-800">
+              Expenses: ${totalExpenses.toLocaleString()}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Search transactions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search transactions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
-          <div className="flex gap-2">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as 'all' | 'income' | 'expense')}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Types</option>
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-            </select>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Categories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </div>
+
+          {/* Type Filter */}
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as 'all' | 'income' | 'expense')}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Types</option>
+            <option value="income">Income</option>
+            <option value="expense">Expenses</option>
+          </select>
+
+          {/* Category Filter */}
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Categories</option>
+            {categories.map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
         </div>
       </div>
 
       {/* Transactions List */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Recent Transactions ({filteredTransactions.length})
-          </h3>
-        </div>
-        <div className="divide-y divide-gray-100">
-          {filteredTransactions.length === 0 ? (
-            <div className="p-8 text-center">
-              <div className="text-gray-400 mb-2">
-                <Filter className="h-12 w-12 mx-auto" />
+        {sortedTransactions.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <DollarSign className="h-8 w-8 text-gray-400" />
               </div>
-              <p className="text-gray-500">No transactions found</p>
-              <p className="text-sm text-gray-400">Try adjusting your filters or add a new transaction</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No transactions found</h3>
+              <p className="text-gray-600">
+                {searchTerm || filterType !== 'all' || filterCategory !== 'all' 
+                  ? 'Try adjusting your filters to see more transactions.'
+                  : 'Start by adding your first transaction to track your finances.'
+                }
+              </p>
             </div>
-          ) : (
-            filteredTransactions.map((transaction) => (
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {sortedTransactions.map((transaction) => (
               <div key={transaction.id} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className={`p-3 rounded-lg ${
-                      transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
+                      transaction.type === 'income' 
+                        ? 'bg-green-100 text-green-600' 
+                        : 'bg-red-100 text-red-600'
                     }`}>
                       {transaction.type === 'income' ? (
-                        <TrendingUp className="h-5 w-5 text-green-600" />
+                        <Plus className="h-5 w-5" />
                       ) : (
-                        <TrendingDown className="h-5 w-5 text-red-600" />
+                        <DollarSign className="h-5 w-5" />
                       )}
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{transaction.description}</h4>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Tag className="h-3 w-3 mr-1" />
-                          {transaction.category}
-                        </div>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {new Date(transaction.date).toLocaleDateString()}
-                        </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h3 className="font-semibold text-gray-900">{transaction.description}</h3>
                         {transaction.recurring && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
                             Recurring
                           </span>
                         )}
                       </div>
+                      
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Tag className="h-3 w-3" />
+                          <span>{transaction.category}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{new Date(transaction.date).toLocaleDateString()}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-lg font-bold ${
-                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
-                    </p>
-                    <p className="text-sm text-gray-500 capitalize">{transaction.type}</p>
+
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <div className={`text-lg font-bold ${
+                        transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleEdit(transaction)}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit transaction"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(transaction)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete transaction"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <TransactionForm
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onAddTransaction={onAddTransaction}
-      />
+      {/* Add Transaction Modal */}
+      {showAddForm && (
+        <TransactionForm
+          onSubmit={(transaction) => {
+            onAddTransaction(transaction);
+            setShowAddForm(false);
+          }}
+          onClose={() => setShowAddForm(false)}
+        />
+      )}
+
+      {/* Edit Transaction Modal */}
+      {editingTransaction && (
+        <EditTransactionForm
+          transaction={editingTransaction}
+          onSubmit={(updatedTransaction) => {
+            onUpdateTransaction(editingTransaction.id, updatedTransaction);
+            setEditingTransaction(null);
+          }}
+          onClose={() => setEditingTransaction(null)}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingTransaction && (
+        <TransactionDeleteModal
+          transaction={deletingTransaction}
+          onConfirm={confirmDelete}
+          onClose={() => setDeletingTransaction(null)}
+        />
+      )}
     </div>
   );
 };
