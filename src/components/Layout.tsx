@@ -14,6 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
     { id: 'budgets', label: 'Budgets', icon: Wallet },
     { id: 'goals', label: 'Goals', icon: Target },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+    { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -26,9 +27,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
                 <Wallet className="h-6 w-6 text-white" />
               </div>
-              <h1 className="text-xl font-bold text-gray-900">FinanceTracker</h1>
+              <h1 className="text-xl font-bold text-gray-900">My Finance Tracker</h1>
             </div>
-            <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+            <button 
+              onClick={() => onTabChange('settings')}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
               <Settings className="h-5 w-5" />
             </button>
           </div>

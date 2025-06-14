@@ -32,3 +32,9 @@ export interface Account {
   balance: number;
   currency: string;
 }
+
+export interface UserProfile {
+  nickname: string;
+  email: string;
+  birthday: string;
+}

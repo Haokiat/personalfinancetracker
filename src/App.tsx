@@ -7,6 +7,7 @@ import Transactions from './components/Transactions';
 import Budgets from './components/Budgets';
 import Goals from './components/Goals';
 import Analytics from './components/Analytics';
+import Settings from './components/Settings';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -221,6 +222,8 @@ function App() {
         );
       case 'analytics':
         return <Analytics transactions={transactions} />;
+      case 'settings':
+        return <Settings />;
       default:
         return (
           <Dashboard
