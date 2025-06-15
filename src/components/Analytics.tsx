@@ -175,6 +175,46 @@ const Analytics: React.FC<AnalyticsProps> = ({ transactions, budgets = [], goals
         </div>
       </div>
 
+      {/* Top Spending Categories */}
+      {topSpendingCategories.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <div className="flex items-center space-x-3 mb-4 sm:mb-6">
+            <div className="bg-purple-100 p-2 rounded-lg">
+              <PieChart className="h-5 w-5 text-purple-600" />
+            </div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              Top Spending Categories (This Month)
+            </h2>
+          </div>
+
+          <div className="space-y-3 sm:space-y-4">
+            {topSpendingCategories.map(([category, data], index) => {
+              const maxExpense = topSpendingCategories[0][1].expense;
+              const percentage = maxExpense > 0 ? (data.expense / maxExpense) * 100 : 0;
+
+              return (
+                <div key={category} className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-700">{category}</span>
+                      <span className="text-sm font-semibold text-red-600">
+                        {formatAmount(data.expense)}
+                      </span>
+                    </div>
+                    <div className="bg-gray-100 rounded-full h-2">
+                      <div
+                        className="bg-red-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Monthly Trends */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
         <div className="flex items-center space-x-3 mb-4 sm:mb-6">
@@ -226,46 +266,6 @@ const Analytics: React.FC<AnalyticsProps> = ({ transactions, budgets = [], goals
           })}
         </div>
       </div>
-
-      {/* Top Spending Categories */}
-      {topSpendingCategories.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          <div className="flex items-center space-x-3 mb-4 sm:mb-6">
-            <div className="bg-purple-100 p-2 rounded-lg">
-              <PieChart className="h-5 w-5 text-purple-600" />
-            </div>
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-              Top Spending Categories (This Month)
-            </h2>
-          </div>
-
-          <div className="space-y-3 sm:space-y-4">
-            {topSpendingCategories.map(([category, data], index) => {
-              const maxExpense = topSpendingCategories[0][1].expense;
-              const percentage = maxExpense > 0 ? (data.expense / maxExpense) * 100 : 0;
-
-              return (
-                <div key={category} className="flex items-center space-x-3 sm:space-x-4">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-700">{category}</span>
-                      <span className="text-sm font-semibold text-red-600">
-                        {formatAmount(data.expense)}
-                      </span>
-                    </div>
-                    <div className="bg-gray-100 rounded-full h-2">
-                      <div
-                        className="bg-red-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Budget Performance */}
       {budgetPerformance.length > 0 && (

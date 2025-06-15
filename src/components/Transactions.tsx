@@ -24,8 +24,15 @@ const Transactions: React.FC<TransactionsProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [filterMonth, setFilterMonth] = useState('all');
 
   const categories = Array.from(new Set(transactions.map(t => t.category)));
+
+  // Generate month options from transactions
+  const months = Array.from(new Set(transactions.map(t => {
+    const date = new Date(t.date);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }))).sort().reverse();
 
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -33,7 +40,14 @@ const Transactions: React.FC<TransactionsProps> = ({
     const matchesType = filterType === 'all' || transaction.type === filterType;
     const matchesCategory = filterCategory === 'all' || transaction.category === filterCategory;
     
-    return matchesSearch && matchesType && matchesCategory;
+    let matchesMonth = true;
+    if (filterMonth !== 'all') {
+      const transactionDate = new Date(transaction.date);
+      const transactionMonth = `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`;
+      matchesMonth = transactionMonth === filterMonth;
+    }
+    
+    return matchesSearch && matchesType && matchesCategory && matchesMonth;
   });
 
   const sortedTransactions = filteredTransactions.sort((a, b) => 
@@ -63,12 +77,18 @@ const Transactions: React.FC<TransactionsProps> = ({
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
+  const formatMonthLabel = (monthString: string) => {
+    const [year, month] = monthString.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl font-bold text-gray-900">Transactions</h2>
-        <div className="flex items-center space-x-3">
+        <div className="flex justify-end">
           <button
             onClick={() => setShowAddForm(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
@@ -76,22 +96,26 @@ const Transactions: React.FC<TransactionsProps> = ({
             <Plus className="h-4 w-4" />
             <span>Add Transaction</span>
           </button>
-          <div className="bg-green-100 px-3 py-2 rounded-lg">
-            <span className="text-sm font-medium text-green-800">
-              Income: ${totalIncome.toLocaleString()}
-            </span>
-          </div>
-          <div className="bg-red-100 px-3 py-2 rounded-lg">
-            <span className="text-sm font-medium text-red-800">
-              Expenses: ${totalExpenses.toLocaleString()}
-            </span>
-          </div>
+        </div>
+      </div>
+
+      {/* Income and Expenses Cards */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-end">
+        <div className="bg-green-100 px-4 py-3 rounded-lg">
+          <span className="text-sm font-medium text-green-800">
+            Income: ${totalIncome.toLocaleString()}
+          </span>
+        </div>
+        <div className="bg-red-100 px-4 py-3 rounded-lg">
+          <span className="text-sm font-medium text-red-800">
+            Expenses: ${totalExpenses.toLocaleString()}
+          </span>
         </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -126,6 +150,18 @@ const Transactions: React.FC<TransactionsProps> = ({
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
+
+          {/* Month Filter */}
+          <select
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Months</option>
+            {months.map(month => (
+              <option key={month} value={month}>{formatMonthLabel(month)}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -139,7 +175,7 @@ const Transactions: React.FC<TransactionsProps> = ({
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No transactions found</h3>
               <p className="text-gray-600">
-                {searchTerm || filterType !== 'all' || filterCategory !== 'all' 
+                {searchTerm || filterType !== 'all' || filterCategory !== 'all' || filterMonth !== 'all'
                   ? 'Try adjusting your filters to see more transactions.'
                   : 'Start by adding your first transaction to track your finances.'
                 }
