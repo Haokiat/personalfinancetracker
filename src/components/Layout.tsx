@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -20,6 +20,30 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Default closed on mobile
+  const [profile, setProfile] = useState({
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    currency: 'SGD',
+  });
+
+  useEffect(() => {
+    // Load profile from localStorage on component mount
+    const savedProfile = localStorage.getItem('userProfile');
+    if (savedProfile) {
+      setProfile(JSON.parse(savedProfile));
+    }
+
+    // Listen for profile updates
+    const handleProfileUpdate = (event: CustomEvent) => {
+      setProfile(event.detail);
+    };
+
+    window.addEventListener('profileUpdated', handleProfileUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate as EventListener);
+    };
+  }, []);
 
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
@@ -93,8 +117,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
                   <User className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-gray-900 truncate">John Doe</h3>
-                  <p className="text-xs text-gray-500 truncate">john.doe@example.com</p>
+                  <h3 className="text-sm font-semibold text-gray-900 truncate">{profile.name}</h3>
+                  <p className="text-xs text-gray-500 truncate">{profile.email}</p>
                 </div>
               </div>
             </div>
