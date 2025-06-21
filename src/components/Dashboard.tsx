@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Target, Wallet, CreditCard, Eye, EyeOff, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Target, Wallet, CreditCard, Eye, EyeOff, ChevronDown, ChevronUp, Plus, PiggyBank } from 'lucide-react';
 import { Transaction, Budget, Goal, Account } from '../types';
 
 interface DashboardProps {
@@ -21,6 +21,10 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, goals, acc
     .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === new Date().getMonth())
     .reduce((sum, t) => sum + t.amount, 0);
   const netIncome = monthlyIncome - monthlyExpenses;
+  
+  // Calculate monthly savings percentage
+  const monthlySavings = netIncome;
+  const savingsPercentage = monthlyIncome > 0 ? (monthlySavings / monthlyIncome) * 100 : 0;
 
   const recentTransactions = transactions
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -156,8 +160,8 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, goals, acc
         )}
       </div>
 
-      {/* Stats Cards - Mobile Optimized */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+      {/* Stats Cards - Mobile Optimized with Savings Card */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
@@ -182,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, goals, acc
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 sm:col-span-2 lg:col-span-1">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Net Income</p>
@@ -192,6 +196,21 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, goals, acc
             </div>
             <div className={`p-2 sm:p-3 rounded-lg ml-2 ${netIncome >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
               <DollarSign className={`h-5 w-5 sm:h-6 sm:w-6 ${netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            </div>
+          </div>
+        </div>
+
+        {/* Savings Card */}
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Savings</p>
+              <p className={`text-lg sm:text-xl lg:text-2xl font-bold truncate ${savingsPercentage >= 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                {showSensitiveInfo ? `${savingsPercentage.toFixed(1)}%` : '••••••'}
+              </p>
+            </div>
+            <div className={`p-2 sm:p-3 rounded-lg ml-2 ${savingsPercentage >= 0 ? 'bg-yellow-100' : 'bg-red-100'}`}>
+              <PiggyBank className={`h-5 w-5 sm:h-6 sm:w-6 ${savingsPercentage >= 0 ? 'text-yellow-600' : 'text-red-600'}`} />
             </div>
           </div>
         </div>

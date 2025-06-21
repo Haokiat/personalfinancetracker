@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Wallet, CreditCard, PiggyBank, TrendingUp, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit2, Trash2, Wallet, CreditCard, PiggyBank, TrendingUp, Eye, EyeOff, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Account } from '../types';
 import AccountForm from './AccountForm';
 
@@ -9,6 +9,8 @@ interface AccountManagementProps {
   onEditAccount: (accountId: string, account: Omit<Account, 'id'>) => void;
   onDeleteAccount: (accountId: string) => void;
 }
+
+type SortOrder = 'none' | 'asc' | 'desc';
 
 const AccountManagement: React.FC<AccountManagementProps> = ({
   accounts,
@@ -20,6 +22,7 @@ const AccountManagement: React.FC<AccountManagementProps> = ({
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(true);
+  const [sortOrder, setSortOrder] = useState<SortOrder>('none');
 
   const handleAddAccount = (accountData: Omit<Account, 'id'>) => {
     onAddAccount(accountData);
@@ -36,6 +39,52 @@ const AccountManagement: React.FC<AccountManagementProps> = ({
   const handleDeleteAccount = (accountId: string) => {
     onDeleteAccount(accountId);
     setShowDeleteConfirm(null);
+  };
+
+  const handleSortToggle = () => {
+    if (sortOrder === 'none') {
+      setSortOrder('desc'); // Start with highest amounts first
+    } else if (sortOrder === 'desc') {
+      setSortOrder('asc');
+    } else {
+      setSortOrder('none');
+    }
+  };
+
+  const getSortedAccounts = () => {
+    if (sortOrder === 'none') {
+      return accounts;
+    }
+    
+    return [...accounts].sort((a, b) => {
+      if (sortOrder === 'asc') {
+        return a.balance - b.balance;
+      } else {
+        return b.balance - a.balance;
+      }
+    });
+  };
+
+  const getSortIcon = () => {
+    switch (sortOrder) {
+      case 'asc':
+        return <ArrowUp className="h-4 w-4" />;
+      case 'desc':
+        return <ArrowDown className="h-4 w-4" />;
+      default:
+        return <ArrowUpDown className="h-4 w-4" />;
+    }
+  };
+
+  const getSortLabel = () => {
+    switch (sortOrder) {
+      case 'asc':
+        return 'Low to High';
+      case 'desc':
+        return 'High to Low';
+      default:
+        return 'Sort by Amount';
+    }
   };
 
   const getAccountIcon = (type: Account['type']) => {
@@ -96,6 +145,7 @@ const AccountManagement: React.FC<AccountManagementProps> = ({
   };
 
   const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0);
+  const sortedAccounts = getSortedAccounts();
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -109,6 +159,17 @@ const AccountManagement: React.FC<AccountManagementProps> = ({
         </div>
         
         <div className="flex items-center space-x-3">
+          {/* Sort Filter */}
+          {accounts.length > 1 && (
+            <button
+              onClick={handleSortToggle}
+              className="flex items-center space-x-2 px-3 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors touch-manipulation"
+            >
+              {getSortIcon()}
+              <span className="text-xs sm:text-sm text-gray-600">{getSortLabel()}</span>
+            </button>
+          )}
+
           {/* Privacy Toggle */}
           <button
             onClick={() => setShowSensitiveInfo(!showSensitiveInfo)}
@@ -149,6 +210,11 @@ const AccountManagement: React.FC<AccountManagementProps> = ({
             </p>
             <p className="text-sky-100 text-xs sm:text-sm mt-1">
               Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}
+              {sortOrder !== 'none' && (
+                <span className="ml-2 bg-white/20 px-2 py-1 rounded text-xs">
+                  Sorted {sortOrder === 'asc' ? 'Low to High' : 'High to Low'}
+                </span>
+              )}
             </p>
           </div>
           <div className="bg-white/20 p-3 rounded-lg self-start sm:self-auto">
@@ -159,9 +225,16 @@ const AccountManagement: React.FC<AccountManagementProps> = ({
 
       {/* Accounts List */}
       <div className="space-y-3 sm:space-y-4">
-        {accounts.length > 0 ? (
-          accounts.map((account) => (
-            <div key={account.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+        {sortedAccounts.length > 0 ? (
+          sortedAccounts.map((account, index) => (
+            <div key={account.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 relative">
+              {/* Sort indicator */}
+              {sortOrder !== 'none' && (
+                <div className="absolute top-2 right-2 bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
+                  #{index + 1}
+                </div>
+              )}
+              
               <div className="flex items-center justify-between space-x-3">
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
                   <div className={`p-2 sm:p-3 rounded-lg ${getAccountTypeColor(account.type)}`}>
